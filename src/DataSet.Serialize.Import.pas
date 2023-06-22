@@ -24,6 +24,7 @@ type
     FJSONObject: TJSONObject;
     FJSONArray: TJSONArray;
     FOwns: Boolean;
+    function strToDatetimeISO8601SemUTF(pDatetimeStr: string): TDateTime;
     /// <summary>
     ///   Delete all records from dataset.
     /// </summary>
@@ -408,8 +409,12 @@ begin
                 LTryStrToDateTime := StrToFloatDef(LJSONValue.Value, 0)
               else if TDataSetSerializeConfig.GetInstance.DateTimeIsISO8601 then
                 LTryStrToDateTime := ISO8601ToDate(LJSONValue.Value, TDataSetSerializeConfig.GetInstance.DateInputIsUTC)
-              else
-                TryStrToDateTime(VarToStr(LJSONValue.Value), LTryStrToDateTime);
+              else begin
+                if TDataSetSerializeConfig.GetInstance.Export.FormatDateTime='yyyy-mm-dd hh:nn:ss' then
+                  LTryStrToDateTime:=strToDatetimeISO8601SemUTF(VarToStr(LJSONValue.Value))
+                else
+                  TryStrToDateTime(VarToStr(LJSONValue.Value), LTryStrToDateTime);
+              end;
               LField.AsDateTime := LTryStrToDateTime;
             end;
           TFieldType.ftTime:
@@ -838,6 +843,28 @@ begin
     ToDataSet(ADataSet);
   finally
     FMerging := False;
+  end;
+end;
+
+function TJSONSerialize.strToDatetimeISO8601SemUTF(
+  pDatetimeStr: string): TDateTime;
+var
+  yyyy, MM, DD, hora: string;
+  lNewStr: string;
+begin
+  try
+    yyyy := copy(pDatetimeStr, 0, 4);
+    MM := copy(pDatetimeStr, 6, 2);
+    DD := copy(pDatetimeStr, 9, 2);
+    hora := '00:00:00.000Z';
+    if Length(pDatetimeStr) > 10 then
+      hora := copy(pDatetimeStr, 12, 8) + '.000Z';
+
+    lNewStr:=yyyy + '-' + MM + '-' + DD + 'T' + hora;
+
+    Result := ISO8601ToDate(lNewStr)
+  except
+    Result := 0;
   end;
 end;
 
